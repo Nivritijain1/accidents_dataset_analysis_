@@ -2,31 +2,49 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from matplotlib.patches import Patch
+
 
 # Load dataset
 df = pd.read_csv("accident.csv", encoding='latin1')
 
-#HANDLING NULL VALUES
+# Drop column with excessive missing values
+if 'TWAY_ID2' in df.columns:
+    df.drop(columns=['TWAY_ID2'], inplace=True)
 
-df_cleaned = df.copy()
+# Create derived metrics
+df['VEH_PER_PERSON'] = df['VE_TOTAL'] / (df['PERSONS'] + 0.1)
+df['TIME_DELAY'] = (df['ARR_HOUR'] - df['HOUR']).replace(99, np.nan)
 
-# Drop column with too many missing values, 
-df_cleaned = df.drop(columns=["TWAY_ID2"], errors='ignore')
+# Keep only valid HOUR entries (0-23)
+df = df[df['HOUR'].between(0, 23)]
 
-# Create derived column, handling potential division by zero
-df_cleaned['VEH_PER_PERSON'] = df_cleaned['VE_TOTAL'] / (df_cleaned['PERSONS'] + 0.1)
+# Check dataset size
+print("Total records after cleaning:", df.shape[0])
 
-# Handle invalid/missing time data (99 = unknown)
-df_cleaned['TIME_DELAY'] = (df_cleaned["ARR_HOUR"] - df_cleaned["HOUR"]).replace(99, np.nan)
+# Check for missing values
+print("\nMissing Values Per Column:")
+print(df.isnull().sum())
 
-sns.set(style="whitegrid")
+# Check for duplicate records
+print("\nNumber of duplicate rows:", df.duplicated().sum())
 
-'''
+# Descriptive statistics for key numerical columns
+print("\nDescriptive Statistics:")
+print(df[['FATALS', 'VE_TOTAL', 'PERSONS', 'VEH_PER_PERSON', 'TIME_DELAY']].describe())
+
+# Correlation matrix using Pearson's correlation
+print("\nCorrelation Matrix:")
+print(df[['FATALS', 'VE_TOTAL', 'PERSONS', 'VEH_PER_PERSON', 'TIME_DELAY']].corr(method='pearson'))
+
+
+
 # 3. OBJECTIVE 1: Temporal Fatality Patterns (Hour of Day)
+
 # hour data must be between 0 to 24 hours
 
 df_cleaned = df[df["HOUR"].between(0, 23)]
-
+'''
 plt.figure(figsize=(10, 5)) 
 sns.lineplot(
     x="HOUR",
@@ -38,12 +56,10 @@ plt.xlabel("Hour")
 plt.ylabel("Total Fatalities")
 plt.tight_layout()
 plt.show()
-
+'''
 
 # OBJECTIVE 2: Interaction of Weather and Light Conditions
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+'''
 
 # --- Cleaning relevant columns ---
 # Retaining rows with valid weather and light conditions
@@ -78,60 +94,47 @@ plt.ylabel("Weather Conditions")
 plt.xticks(rotation=30)
 plt.tight_layout()
 plt.show()
-
 '''
+
 #OBJECTIVE 3: Spatial Crash Clustering (Lat/Lon + Rural/Urban)
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 
-# ------------------------------------------------------
-# 🔍 Objective 3: Spatial Clustering of High-Fatality Crash Zones
-# Using LATITUDE, LONGITUD, and RUR_URBNAME (Urban/Rural)
-# ------------------------------------------------------
-
-# 1. Filter valid GPS coordinates
-df_location = df_cleaned[
-    df_cleaned["LATITUDE"].between(-90, 90) & 
-    df_cleaned["LONGITUD"].between(-180, 180)
+# Filter data
+df = df[
+    (df["LATITUDE"].between(-90, 90)) &
+    (df["LONGITUD"].between(-180, 180)) &
+    (df["RUR_URBNAME"].isin(["Urban", "Rural"]))
 ]
 
-# 2.  Remove rows with NaN in urban/rural classification
-df_location = df_location[df_location["RUR_URBNAME"].notnull()]
+# Set plot size
+plt.figure(figsize=(10, 6))
 
-# 3. Plot: Density of fatal crashes by location (basic heatmap view)
-plt.figure(figsize=(10, 8))
+# Plot KDE for Urban
 sns.kdeplot(
-    data=df_location, 
-    x="LONGITUD", 
-    y="LATITUDE", 
-    cmap="Reds", 
-    shade=True, 
-    bw_adjust=0.5,
-    thresh=0.05
+    data=df[df["RUR_URBNAME"] == "Urban"],
+    x="LONGITUD", y="LATITUDE",
+    fill=True, cmap="Blues", alpha=0.5
 )
 
-plt.title("📍 Spatial Density of Fatal Crashes (U.S.)")
+# Plot KDE for Rural
+sns.kdeplot(
+    data=df[df["RUR_URBNAME"] == "Rural"],
+    x="LONGITUD", y="LATITUDE",
+    fill=True, cmap="Greens", alpha=0.5
+)
+
+# Add custom legend
+legend_patches = [
+    Patch(facecolor='blue', edgecolor='blue', label='Urban'),
+    Patch(facecolor='green', edgecolor='green', label='Rural')
+]
+
+plt.legend(handles=legend_patches, title="Area Type", loc="upper right")
+
+# Labels
+plt.title("Accident Hotspots by Area Type (Urban vs Rural)")
 plt.xlabel("Longitude")
 plt.ylabel("Latitude")
+
 plt.tight_layout()
 plt.show()
-
-# ---------------------------------------------
-# Group by urban vs rural areas
-# To compare number of fatalities based on area type
-# ---------------------------------------------
-urban_rural_stats = df_location.groupby("RUR_URBNAME")["FATALS"].sum().reset_index().sort_values(by="FATALS", ascending=False)
-
-plt.figure(figsize=(8, 5))
-sns.barplot(data=urban_rural_stats, x="RUR_URBNAME", y="FATALS", palette="mako")
-plt.title("Fatalities by Urban/Rural Classification")
-plt.xlabel("Area Type")
-plt.ylabel("Total Fatalities")
-plt.xticks(rotation=30)
-plt.tight_layout()
-plt.show()
-
-
-
 
