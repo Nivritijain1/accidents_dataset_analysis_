@@ -138,3 +138,37 @@ plt.ylabel("Latitude")
 plt.tight_layout()
 plt.show()
 
+
+
+# OBJECTIVE 4 : To quantify the impact of roadway function class and presence of work zones on the frequency and fatality count of crashes.
+'''
+plt.figure(figsize=(12, 6))
+sns.boxplot(x="WRK_ZONENAME", y="FATALS", data=df_cleaned)
+plt.title("Fatalities by Work Zone Presence")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+'''
+
+#OBJECTIVE 5 : To determine whether the number of drunk drivers involved in a crash correlates with higher multi-fatality occurrences, using statistical thresholds.
+'''
+plt.figure(figsize=(10, 6))
+sns.histplot(df_cleaned['VEH_PER_PERSON'], bins=30, kde=True)
+plt.title("Vehicle-to-Person Ratio Distribution")
+plt.xlabel("Vehicles / Persons")
+plt.tight_layout()
+plt.show()
+'''
+
+#OBJECTIVE 6: Junction Proximity vs Fatalities
+'''
+plt.figure(figsize=(12, 6))
+sns.violinplot(x="RELJCT1NAME", y="FATALS", data=df_cleaned)
+plt.title("Fatalities by Junction Relation")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+'''
+
+
+
